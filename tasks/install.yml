@@ -8,6 +8,12 @@
   with_items: "{{ tomcat_java_packages_EL }}"
   when: tomcat_install_java|bool
 
+- name: Install unzip utils
+  yum:
+    name:
+      - unzip
+    state: present
+
 - name: Check if tomcat is already installed
   stat:
     path: "{{ tomcat_install_path }}/apache-tomcat-{{ tomcat_version }}"
@@ -48,6 +54,8 @@
     owner: "{% if tomcat_permissions_production %}root{% else %}{{ tomcat_user }}{% endif %}"
     group: "{{ tomcat_group }}"
     creates: "{{ tomcat_install_path }}/apache-tomcat-{{ tomcat_version }}"
+    extra_opts: "{{ tomcat_unarchive_extra_opts }}"
+
   register: tomcat_installed
   when: not is_installed.stat.exists
 

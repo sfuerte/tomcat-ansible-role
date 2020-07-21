@@ -29,12 +29,14 @@
   template:
     src: "{{ tomcat_template_manager_context }}"
     dest: "{{ tomcat_install_path }}/apache-tomcat-{{ tomcat_version }}/webapps/manager/META-INF/context.xml"
+  when: not tomcat_skip_manager_apps
   notify: restart tomcat
 
 - name: Configure access to Host Manager (from localhost only or from anywhere)
   template:
     src: "{{ tomcat_template_host_manager_context }}"
     dest: "{{ tomcat_install_path }}/apache-tomcat-{{ tomcat_version }}/webapps/host-manager/META-INF/context.xml"
+  when: not tomcat_skip_manager_apps
   notify: restart tomcat
 
 - name: Set production permissions
@@ -52,7 +54,13 @@
 - name: Configure service file {{ tomcat_service_name }}.service
   template:
     src: "{{ tomcat_template_systemd_service }}"
-    dest: /usr/lib/systemd/system/{{ tomcat_service_name }}.service
+    dest: "{{ tomcat_systemd_config_path }}/{{ tomcat_service_name }}.service"
+  notify: restart tomcat
+
+- name: Configure setenv.sh
+  template:
+    src: "{{ tomcat_template_setenv }}"
+    dest: "{{ tomcat_install_path }}/{{ tomcat_service_name }}/bin/setenv.sh"
   notify: restart tomcat
 
 - name: Enable tomcat service on startup

@@ -96,12 +96,14 @@ Some defaults (probably not requiring tampering):
 - `tomcat_group`: tomcat
 - `tomcat_listen_address`: 0.0.0.0
 - `tomcat_temp_download_path`: /tmp/ansibletomcattempdir
+- `tomcat_systemd_config_path`: /etc/systemd/system
 
 Custom templates for server.xml, users.xml, systemd service file, etc.:
 - In case the default templates don't suit your needs, you can use your own custom templates by changing the following variables:
   * `tomcat_template_server`
   * `tomcat_template_users`
   * `tomcat_template_systemd_service`
+  * `tomcat_template_setenv`
   * `tomcat_template_manager_context`
   * `tomcat_template_host_manager_context`
 
@@ -109,6 +111,19 @@ Optional variables (by default undefined):
 - You can set custom user uid and group gid for homogeneity across multiple servers. For example:
   * `tomcat_user_uid`: 500
   * `tomcat_group_gid`: 500
+
+Skipping install of bundled webapps:
+- In the tomcat packages are bundled some webapps like *manager*, *host_manager* and *docs*. If you want to skip the installation you need to set
+  
+  * `tomcat_skip_manager_apps`: true (Default: False)
+  * ```  
+    tomcat_unarchive_extra_opts: 
+      - --exclude=apache-tomcat-{{ tomcat_version }}/ webapps/ docs
+      - --exclude=apache-tomcat-{{ tomcat_version }}/ webapps/ examples 
+      - --exclude=apache-tomcat-{{ tomcat_version }}/ webapps/ host-manager
+      - --exclude=apache-tomcat-{{ tomcat_version }}/ webapps/ manager
+    ```
+  
 
 In case of uninstallation:
 - `tomcat_state`: absent
