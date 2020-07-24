@@ -1,6 +1,6 @@
 # tomcat-ansible-role
 
-[![Build Status](https://travis-ci.org/zaxos/tomcat-ansible-role.svg?branch=master)](https://travis-ci.org/zaxos/tomcat-ansible-role)
+[![Build Status](https://travis-ci.com/sfuerte/tomcat-ansible-role.svg?branch=master)](https://travis-ci.com/github/sfuerte/tomcat-ansible-role)
 
 Ansible role to install and configure Apache Tomcat on your target host. Based on `zaxos.tomcat-ansible-role`. Only stable Tomcat versions with no announced [End of Life](https://en.wikipedia.org/wiki/Apache_Tomcat#History) (EoL) are supported, i.e.
 
