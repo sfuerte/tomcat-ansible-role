@@ -3,9 +3,10 @@ FROM debian:stretch-backports
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Install Ansible
-RUN apt update && \
-  apt dist-upgrade -o Dpkg::Options::="--force-confnew" -y && \
-  apt install -t stretch-backports -o Dpkg::Options::="--force-confnew" -y ansible systemd && \
+# hadolint ignore=DL3008
+RUN apt-get update && \
+  apt-get dist-upgrade -o Dpkg::Options::="--force-confnew" -y && \
+  apt-get install --no-install-recommends -t stretch-backports -o Dpkg::Options::="--force-confnew" -y ansible systemd && \
   rm -rf /var/lib/apt/lists/*
 
 # Install Ansible inventory file

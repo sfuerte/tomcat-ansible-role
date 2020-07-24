@@ -2,11 +2,12 @@ FROM ubuntu:bionic
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN apt update && \
-  apt install -y software-properties-common systemd
-
-RUN apt-add-repository --yes --update ppa:ansible/ansible && \
-  apt install -y ansible
+# hadolint ignore=DL3008
+RUN apt-get update && \
+  apt-get install --no-install-recommends -y software-properties-common systemd && \
+  apt-add-repository --yes --update ppa:ansible/ansible && \
+  apt-get install --no-install-recommends -y ansible && \
+  rm -rf /var/lib/apt/lists/*
 
 RUN echo "[local]\nlocalhost ansible_connection=local ansible_python_interpreter=/usr/bin/python3" > /etc/ansible/hosts
 
