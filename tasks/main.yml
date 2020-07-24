@@ -1,14 +1,28 @@
 ---
 # tasks file for tomcat-ansible-role
 
-- name: Install tomcat
-  include: install.yml
+- name: Tomcat - install and configure server
+  block:
+    - name: Tomcat - install server
+      include_tasks: install.yml
+
+    - name: Tomcat - configure application server
+      include_tasks: configure.yml
+
+    - name: Tomcat - generate self-signed certificate
+      include_tasks: "ssl.yml"
+      when: tomcat_ssl_generate_cert
+
+    - name: Tomcat - update `systemd` configuration
+      include_tasks: "systemd.yml"
+      when: tomcat_service_enabled
+
+    - name: Tomcat - set return facts
+      set_fact:
+        catalina_home: "{{ catalina_home }}"
+        tomcat_version: "{{ tomcat_version }}"
   when: tomcat_state == "present"
 
-- name: Configure tomcat
-  include: configure.yml
-  when: tomcat_state == "present"
-
-- name: Uninstall tomcat
-  include: uninstall.yml
+- name: Tomcat - uninstall server
+  include_tasks: uninstall.yml
   when: tomcat_state == "absent"

@@ -1,19 +1,43 @@
-# Systemd unit file for tomcat
+# Tomcat Web Application Server service file for systemd
+#
+# Managed by Ansible Tomcat Ansible role (zaxos.tomcat-ansible-role)
+# DO NOT EDIT
+# all local changes will be overwritten!
+#
+# generated at {{ ansible_date_time.iso8601 }}
+#
+
 [Unit]
-Description=Apache Tomcat Web Application Container
-After=syslog.target network.target
+Description=Apache Tomcat Web Application Server
+Before=runlevel2.target runlevel3.target runlevel4.target runlevel5.target shutdown.target display-manager.service
+After=syslog.target network.target remote-fs.target nss-lookup.target
+Conflicts=shutdown.target
 
 [Service]
-Type=forking
-
-Environment=CATALINA_HOME={{ tomcat_install_path }}/{{ tomcat_service_name }}
-Environment=CATALINA_BASE={{ tomcat_install_path }}/{{ tomcat_service_name }}
-
-ExecStart={{ tomcat_install_path }}/{{ tomcat_service_name }}/bin/startup.sh
-ExecStop={{ tomcat_install_path }}/{{ tomcat_service_name }}/bin/shutdown.sh
-
-User={{ tomcat_user }}
+Environment=CATALINA_BASE={{ catalina_base }}
+Environment=CATALINA_HOME={{ catalina_home }}
+Environment=CATALINA_OPTS="{{ catalina_opts }}{% if tomcat_port_debug > 0 %} -Xdebug -Xrunjdwp:transport=dt_socket,address={{ tomcat_port_debug }},server=y,suspend=n{% endif %}"
+Environment=CATALINA_PID={{ tomcat_pid }}
+Environment=JAVA_OPTS="{{ java_options }}"
+ExecStart={{ catalina_home }}/bin/startup.sh
+ExecStop={{ catalina_home }}/bin/shutdown.sh
+ExecReload=/bin/kill -HUP $(cat {{ tomcat_pid }})
+{# ExecReload={{ catalina_home }}/bin/tomcat.sh restart #}
+User={{ tomcat_runtime_user }}
 Group={{ tomcat_group }}
+GuessMainPID=no
+IgnoreSIGPIPE=no
+KillMode=process
+PIDFile={{ tomcat_pid }}
+RemainAfterExit=yes
+Restart=on-failure
+RestartSec=30s
+StandardOutput=file:{{ tomcat_start_log }}
+StandardError=file:{{ catalina_base }}/logs/tomcat-service.err
+TimeoutSec=5min
+Type=forking
+WorkingDirectory={{ catalina_base }}
 
 [Install]
+Alias=tomcat {{ tomcat_service_name }}
 WantedBy=multi-user.target

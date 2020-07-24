@@ -1,69 +1,123 @@
 ---
 # defaults file for tomcat-ansible-role
 
+#
+# package and installation settings
+#
 tomcat_state: present
+tomcat_force_install: false
 
-tomcat_version: 8.5.42
+tomcat_version: 9.0.37
 tomcat_major_version: "{{ tomcat_version.split('.')[0].tomcat_version.split('.')[1] }}"
-
-tomcat_install_java: True
-tomcat_java_version: 1.8
-tomcat_java_home: /usr/lib/jvm/jre
-
-tomcat_java_packages_EL:
- - {package: "java-{{ tomcat_java_version }}{% if '1.' in tomcat_java_version|string %}.0{% endif %}-openjdk"}
-
-tomcat_downloadURL: https://archive.apache.org/dist
+tomcat_downloadURL: https://archive.apache.org/dist/tomcat/tomcat-{{ tomcat_version.split('.')[0] }}/v{{ tomcat_version }}/bin/apache-tomcat-{{ tomcat_version }}.tar.gz
 
 tomcat_user: tomcat
 tomcat_group: tomcat
+tomcat_runtime_user: "{{ tomcat_user }}"
 
-tomcat_install_path: /opt
-tomcat_service_name: tomcat
-tomcat_systemd_config_path: /etc/systemd/system/
-tomcat_jvm_memory_percentage_xms: 15
-tomcat_jvm_memory_percentage_xmx: 55
+tomcat_group_create: true
+tomcat_user_create: true
 
-tomcat_permissions_production: False
-tomcat_webapps_auto_deployment: True
-tomcat_permissions_ensure_on_every_run: True
+system_base: /opt
+catalina_base: "/var/lib/tomcat"
+catalina_home: "{{ system_base }}/tomcat"
+tomcat_dir_mode: 0750
+tomcat_file_mode: 0640
 
-tomcat_allow_manager_access_only_from_localhost: False
-tomcat_allow_host_manager_access_only_from_localhost: False
+tomcat_delete_old: false
+tomcat_demo_delete: true
 
-tomcat_debug_mode: False
 
+#
+# systemd service settings
+#
+tomcat_service_enabled: true
+tomcat_service_name: "tomcat"
+tomcat_pid: "{{ catalina_base }}/tomcat.pid"
+tomcat_start: false
+tomcat_start_log: "{{ catalina_base }}/logs/tomcat-start.log"
+
+
+#
+# runtime settings
+#
 tomcat_listen_address: 0.0.0.0
-tomcat_port_shutdown: 8005
-tomcat_port_connector: 8080
-tomcat_port_redirect: 8443
-tomcat_port_ajp: 8009
-tomcat_port_debug: 8000
-
-tomcat_service_enabled_on_startup: True
+tomcat_port_http: 8080
+tomcat_port_https: 8443
+# use -1 to disable
+tomcat_port_ajp: -1
+tomcat_port_debug: -1
+tomcat_port_shutdown: -1
 
 tomcat_users: []
-
 tomcat_user_roles: []
 
-tomcat_template_manager_context: "manager-context.xml.j2"
-tomcat_template_host_manager_context: "host-manager-context.xml.j2"
+tomcat_server_listeners:
+  - "org.apache.catalina.core.AprLifecycleListener"
+  - "org.apache.catalina.core.JreMemoryLeakPreventionListener"
+  - "org.apache.catalina.core.ThreadLocalLeakPreventionListener"
+  - "org.apache.catalina.mbeans.GlobalResourcesLifecycleListener"
+  - "org.apache.catalina.security.SecurityListener"
+  - "org.apache.catalina.storeconfig.StoreConfigLifecycleListener"
+  - "org.apache.catalina.startup.VersionLoggerListener"
+tomcat_server_listeners_conf:
+  AprLifecycleListener: 'SSLEngine="on"'
+  JreMemoryLeakPreventionListener: 'appContextProtection="true"'
+
+tomcat_https_redirect: false
+tomcat_ssl_generate_cert: false
+tomcat_ssl_certificate:
+  file: "{{ catalina_base }}/conf/ssl/localhost.crt"
+  key: "{{ catalina_base }}/conf/ssl/localhost.key"
+# must be explicitly enabled
+tls_protocols:
+  - "TLSv1.3"
+  - "TLSv1.2"
+# see https://www.ssllabs.com/ssltest and https://github.com/dev-sec/ssl-baseline for details
+tls_cipher_suites:
+  # TLS 1.3 cipher suites
+  - "TLS_AES_256_GCM_SHA384"
+  # TODO: not available in Java 11
+  # - "TLS_CHACHA20_POLY1305_SHA256"
+  # TLS 1.2 cipher suites
+  - "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"
+  - "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"
+  - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+  - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+
+catalina_opts: >-
+  -Dorg.apache.catalina.STRICT_SERVLET_COMPLIANCE=true
+  -Dorg.apache.catalina.connector.RECYCLE_FACADES=true
+  -Dorg.apache.tomcat.util.http.ServerCookie.ALWAYS_ADD_EXPIRES=true
+
+java_options: >-
+  -server
+  -Xms1g
+  -Xmx1g
+  -XX:MetaspaceSize=256m
+  -XX:MaxMetaspaceSize=256m
+  -XX:+UseContainerSupport
+  -XX:MaxTenuringThreshold=1
+  -XX:+UseAES
+  -XX:+UseCompressedOops
+  -Djava.security.egd=file:/dev/./urandom
+  -XX:+DisableExplicitGC
+  -XX:+UnlockExperimentalVMOptions
+  -XX:+UseZGC
+  -Xlog:gc:file={{ catalina_base }}/logs/jvm_gc.log:utctime,pid,level,tags:filecount=5,filesize=1024
+  -XX:+PrintClassHistogram
+  -XX:+HeapDumpOnOutOfMemoryError
+  -XX:HeapDumpPath={{ catalina_base }}/logs/jvm_heapdump.hprof
+
+
 tomcat_template_systemd_service: "tomcat.service.j2"
-tomcat_template_setenv: "tomcat.setenv.sh.j2"
 tomcat_template_server: "tomcat-server-{{ '.'.join(tomcat_version.split('.')[:2]) }}.xml.j2"
 tomcat_template_users: "tomcat-users-{{ '.'.join(tomcat_version.split('.')[:2]) }}.xml.j2"
 
-tomcat_temp_download_path: /tmp/ansibletomcattempdir
-
-tomcat_unarchive_extra_opts: ""
-
-tomcat_skip_manager_apps: false
-
-# Uninstall default parameters
+#
+# uninstall default parameters
+#
 tomcat_uninstall_create_backup: True
-
-tomcat_uninstall_remove_user: True
-tomcat_uninstall_remove_group: True
-tomcat_uninstall_remove_java: False
-
 tomcat_uninstall_remove_all: False
+tomcat_uninstall_remove_group: True
+tomcat_uninstall_remove_user: True

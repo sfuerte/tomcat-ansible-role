@@ -1,66 +1,50 @@
 ---
 # tasks file for tomcat-ansible-role
 
-- name: (uninstall) Check if tomcat service is installed
-  stat:
-    path: /usr/lib/systemd/system/{{ tomcat_service_name }}.service
-  register: service_installed
-
-- name: (uninstall) Stop tomcat service if running
+- name: Tomcat - uninstall - stop Tomcat service
   systemd:
     name: "{{ tomcat_service_name }}"
-    enabled: no
+    enabled: false
+    force: true
+    daemon_reload: true
     state: stopped
-  when: service_installed.stat.exists
+  ignore_errors: true
 
-- name: (uninstall) Remove service file {{ tomcat_service_name }}.service
+- name: Tomcat - uninstall - remove symlinks
   file:
-    path: /usr/lib/systemd/system/{{ tomcat_service_name }}.service
+    path: "{{ item }}"
     state: absent
+  loop:
+    - "/etc/systemd/system/{{ tomcat_service_name }}.service"
+    - "{{ catalina_home }}"
 
-- name: (uninstall) Perform systemctl daemon-reload
-  systemd:
-    daemon_reload: yes
-  changed_when: false
-
-- name: (uninstall) Check if tomcat is already uninstalled
-  stat:
-    path: "{{ tomcat_install_path }}/apache-tomcat-{{ tomcat_version }}"
-  register: is_uninstalled
-
-- name: (uninstall) Remove symlink {{ tomcat_install_path }}/{{ tomcat_service_name }}
-  file:
-    path: "{{ tomcat_install_path }}/{{ tomcat_service_name }}"
-    state: absent
-
-- name: (uninstall) Create backup archive before deletion at {{ tomcat_install_path }}/tomcat-backup-XXX.tgz
+- name: Tomcat - uninstall - Create backup archive at {{ system_base }}/tomcat-backup-XXX.tgz
   archive:
-    path: "{{ tomcat_install_path }}/apache-tomcat-{{ tomcat_version }}"
-    dest: "{{ tomcat_install_path }}/tomcat-backup-{{ lookup('pipe','date +%Y%m%d%H%M%S') }}.tgz"
-  when: tomcat_uninstall_create_backup and is_uninstalled.stat.exists
+    path: "{{ catalina_base }}"
+    dest: "{{ system_base }}/tomcat-backup-{{ lookup('pipe','date +%Y%m%d%H%M%S') }}.tgz"
+    owner: "{{ tomcat_runtime_user }}"
+    group: "{{ tomcat_group }}"
+    mode: "{{ tomcat_dir_mode }}"
+  when: tomcat_uninstall_create_backup
 
-- name: (uninstall) Remove {{ tomcat_install_path }}/apache-tomcat-{{ tomcat_version }}
+- name: Tomcat - uninstall - delete folders
   file:
-    path: "{{ tomcat_install_path }}/apache-tomcat-{{ tomcat_version }}"
+    path: "{{ item }}"
     state: absent
+  loop:
+    - "{{ catalina_base }}"
+    - "{{ system_base }}/apache-tomcat-{{ tomcat_version }}"
 
-- name: (uninstall) Delete user {{ tomcat_user }}
+- name: Tomcat - uninstall - delete user {{ tomcat_user }}
   user:
     name: "{{ tomcat_user }}"
+    force: yes
     groups: "{{ tomcat_group }}"
     state: absent
-    force: yes
   when: tomcat_uninstall_remove_all or tomcat_uninstall_remove_user
 
-- name: (uninstall) Delete group {{ tomcat_group }}
+- name: Tomcat - uninstall - delete group {{ tomcat_group }}
   group:
     name: "{{ tomcat_group }}"
     state: absent
   when: tomcat_uninstall_remove_all or tomcat_uninstall_remove_group
-
-- name: (uninstall) Uninstall Java
-  yum:
-    name: "{{ item.package }}"
-    state: absent
-  with_items: "{{ tomcat_java_packages_EL }}"
-  when: tomcat_uninstall_remove_all or tomcat_uninstall_remove_java

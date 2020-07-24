@@ -1,29 +1,58 @@
 ---
-language: python
-python: "2.7"
+services:
+  - docker
+sudo: required
 
-# Use the new container infrastructure
-sudo: false
+env:
+  # https://en.wikipedia.org/wiki/CentOS#Versioning_and_releases
+  - distribution: centos
+    version: 8
+  - distribution: centos
+    version: 7
+  # https://en.wikipedia.org/wiki/Fedora_(operating_system)#Releases
+  - distribution: fedora
+    version: 32
+  - distribution: fedora
+    version: 31
+  # https://en.wikipedia.org/wiki/Debian_version_history
+  # Buster
+  - distribution: debian
+    version: 10
+  # Stretch
+  - distribution: debian
+    version: 9
+  # https://en.wikipedia.org/wiki/Ubuntu#Releases
+  # 20.04 LTS
+  - distribution: ubuntu
+    version: focal
+  # 18.04 LTS
+  - distribution: ubuntu
+    version: bionic
 
-# Install ansible
-addons:
-  apt:
-    packages:
-      - python-pip
-
-install:
-  # Install ansible
-  - pip install ansible
-
-  # Check ansible version
-  - ansible --version
-
-  # Create ansible.cfg with correct roles_path
-  - printf '[defaults]\nroles_path=../' >ansible.cfg
+before_install:
+  # - sudo apt-get update
+  - docker pull ${distribution}:${version}
+  - docker build --no-cache --rm=true --file=tests/Dockerfile.${distribution}-${version} --tag=${distribution}-${version}:ansible tests
 
 script:
-  # Basic role syntax check
-  - ansible-playbook tests/test.yml -i tests/inventory --syntax-check
+  - container_id=$(mktemp)
+  - >-
+    docker run
+    --detach
+    --privileged
+    --volume /sys/fs/cgroup:/sys/fs/cgroup:ro
+    --volume "${PWD}":/etc/ansible/roles/tomcat-ansible-role:ro
+    ${distribution}-${version}:ansible
+    > "${container_id}"
+  - docker exec "$(cat ${container_id})" env ANSIBLE_FORCE_COLOR=1 ansible --version
+  - docker exec "$(cat ${container_id})" env ANSIBLE_FORCE_COLOR=1 ansible-playbook -v /etc/ansible/roles/tomcat-ansible-role/tests/test.yml --syntax-check
+  - docker exec "$(cat ${container_id})" env ANSIBLE_FORCE_COLOR=1 ansible-playbook -v /etc/ansible/roles/tomcat-ansible-role/tests/test.yml
+  - >
+    docker exec "$(cat ${container_id})" env ANSIBLE_FORCE_COLOR=1 ansible-playbook -v /etc/ansible/roles/tomcat-ansible-role/tests/test.yml
+    | grep -q -E 'unreachable=0\s+failed=0'
+    && (echo 'Idempotence test: pass' && exit 0)
+    || (echo 'Idempotence test: fail' && exit 1)
+  - docker rm -f "$(cat ${container_id})"
 
 notifications:
   webhooks: https://galaxy.ansible.com/api/v1/notifications/

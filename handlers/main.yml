@@ -1,8 +1,20 @@
 ---
 # handlers file for tomcat-ansible-role
 
-- name: restart tomcat
+- name: Tomcat start
+  systemd:
+    name: "{{ tomcat_service_name }}"
+    state: started
+    daemon_reload: yes
+  when:
+    - tomcat_start | bool
+    - not ansible_check_mode
+
+- name: Tomcat restart
   systemd:
     name: "{{ tomcat_service_name }}"
     state: restarted
     daemon_reload: yes
+  when:
+    - tomcat_start | bool
+    - not ansible_check_mode

@@ -1,67 +1,104 @@
 ---
 # tasks file for tomcat-ansible-role
 
-- name: Install Java
-  yum:
-    name: "{{ item.package }}"
-    state: present
-  with_items: "{{ tomcat_java_packages_EL }}"
-  when: tomcat_install_java|bool
-
-- name: Install unzip utils
-  yum:
-    name:
-      - unzip
-    state: present
-
-- name: Check if tomcat is already installed
+- name: Tomcat - install - check if Tomcat is already installed
   stat:
-    path: "{{ tomcat_install_path }}/apache-tomcat-{{ tomcat_version }}"
+    path: "{{ system_base }}/apache-tomcat-{{ tomcat_version }}"
   register: is_installed
 
-- name: Create group {{ tomcat_group }}
+- name: Tomcat - install - create group {{ tomcat_group }}
   group:
     name: "{{ tomcat_group }}"
     gid: "{{ tomcat_group_gid | default(omit) }}"
     state: present
+    system: true
+  when: tomcat_group_create
 
-- name: Create user {{ tomcat_user }}
+- name: Tomcat - install - create user {{ tomcat_user }}
   user:
     name: "{{ tomcat_user }}"
+    comment: "Tomcat Web Server pseudo-user"
+    createhome: false
     group: "{{ tomcat_group }}"
-    uid: "{{ tomcat_user_uid | default(omit) }}"
+    home: "{{ catalina_home }}"
+    shell: "/usr/sbin/nologin"
     state: present
+    system: true
+    uid: "{{ tomcat_user_uid | default(omit) }}"
+  when: tomcat_user_create
 
-- name: Create temp directory
-  file:
-    path: '{{ tomcat_temp_download_path }}'
-    state: directory
-  changed_when: False
-  when: not is_installed.stat.exists
-
-- name: Download apache-tomcat-{{ tomcat_version }}.tar.gz
-  get_url:
-    url: "{{ tomcat_downloadURL }}/tomcat/tomcat-{{ tomcat_version.split('.')[0] }}/v{{ tomcat_version }}/bin/apache-tomcat-{{ tomcat_version }}.tar.gz"
-    dest: '{{ tomcat_temp_download_path }}'
-    timeout: 120
-  when: not is_installed.stat.exists
-
-- name: Unarchive apache-tomcat-{{ tomcat_version }}.tar.gz at {{ tomcat_install_path }}
+- name: Tomcat - install - unarchive package
   unarchive:
-    src: "{{ tomcat_temp_download_path }}/apache-tomcat-{{ tomcat_version }}.tar.gz"
-    dest: "{{ tomcat_install_path }}"
-    remote_src: True
-    owner: "{% if tomcat_permissions_production %}root{% else %}{{ tomcat_user }}{% endif %}"
+    src: "{{ tomcat_downloadURL }}"
+    creates: "{{ system_base }}/apache-tomcat-{{ tomcat_version }}"
+    dest: "{{ system_base }}"
     group: "{{ tomcat_group }}"
-    creates: "{{ tomcat_install_path }}/apache-tomcat-{{ tomcat_version }}"
-    extra_opts: "{{ tomcat_unarchive_extra_opts }}"
-
+    owner: "{{ tomcat_user }}"
+    remote_src: True
   register: tomcat_installed
-  when: not is_installed.stat.exists
+  when: not is_installed.stat.exists or tomcat_force_install
 
-- name: Clean up temporary files
+- name: Tomcat - install - change ownership of the distribution folder
   file:
-    path: '{{ tomcat_temp_download_path }}'
+    path: "{{ system_base }}/apache-tomcat-{{ tomcat_version }}"
+    owner: "{{ tomcat_user }}"
+    group: "{{ tomcat_group }}"
+    mode: "{{ tomcat_dir_mode }}"
+    state: directory
+  when: not is_installed.stat.exists or tomcat_force_install
+
+- name: Tomcat - install - create symbolic link to distribution
+  file:
+    src: "{{ system_base }}/apache-tomcat-{{ tomcat_version }}"
+    dest: "{{ catalina_home }}"
+    state: link
+  when: not is_installed.stat.exists or tomcat_force_install
+
+- name: Tomcat - install - create `base` and `logs` folder structure
+  file:
+    group: "{{ tomcat_group }}"
+    owner: "{{ tomcat_runtime_user }}"
+    mode: "{{ tomcat_dir_mode }}"
+    path: "{{ item }}"
+    recurse: true
+    state: directory
+  loop:
+    - "{{ catalina_base }}"
+    - "{{ catalina_base }}/conf"
+    - "{{ catalina_base }}/lib"
+    - "{{ catalina_base }}/logs"
+    - "{{ catalina_base }}/webapps"
+    - "{{ catalina_base }}/temp"
+
+- name: Tomcat - install - find obsolete distribution folders
+  find:
+    file_type: directory
+    excludes: "apache-tomcat-{{ tomcat_version }}"
+    paths: "{{ system_base }}"
+    patterns: "apache-tomcat-.*"
+    recurse: true
+    use_regex: true
+  register: _tomcat_cleanup
+  when: tomcat_delete_old
+
+- name: Tomcat - install - delete obsolete distribution folders
+  file:
+    path: "{{ item.path }}"
     state: absent
-  changed_when: False
-  when: not is_installed.stat.exists
+  loop: "{{ _tomcat_cleanup.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+  when:
+    - tomcat_delete_old
+    - _tomcat_cleanup.matched > 0
+
+- name: Jetty - install - delete `demo-base` folder
+  file:
+    path: "{{ catalina_home }}/{{ item }}"
+    state: absent
+  loop:
+    - "logs"
+    - "temp"
+    - "webapps"
+    - "work"
+  when: tomcat_demo_delete

@@ -1,0 +1,23 @@
+---
+
+- name: Tomcat - systemd - prepare a service file
+  template:
+    src: "tomcat.service.j2"
+    dest: "{{ catalina_base }}/{{ tomcat_service_name }}.service"
+    group: "{{ tomcat_group }}"
+    owner: "{{ tomcat_runtime_user }}"
+    mode: "{{ tomcat_file_mode }}"
+
+- name: Tomcat - systemd - create symlink
+  file:
+    src: "{{ catalina_base }}/{{ tomcat_service_name }}.service"
+    dest: "/etc/systemd/system/{{ tomcat_service_name }}.service"
+    state: "link"
+
+- name: Tomcat - systemd - enable service
+  systemd:
+    name: "{{ tomcat_service_name }}"
+    enabled: true
+    masked: false
+    daemon_reload: true
+  notify: "Tomcat start"

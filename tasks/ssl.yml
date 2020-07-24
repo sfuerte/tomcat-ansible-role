@@ -1,0 +1,53 @@
+---
+
+- name: Tomcat - ssl - check if certificate exists
+  stat:
+    path: "{{ tomcat_ssl_certificate.key }}"
+  register: _is_cert
+
+- name: Tomcat - ssl - ensuring required folder exists
+  file:
+    path: "{{ tomcat_ssl_certificate.key | dirname }}"
+    group: "{{ tomcat_group }}"
+    owner: "{{ tomcat_runtime_user }}"
+    mode: "{{ tomcat_dir_mode }}"
+    recurse: true
+    state: directory
+  when: not _is_cert.stat.exists
+
+- name: Tomcat - ssl - generate an OpenSSL private key
+  openssl_privatekey:
+    path: "{{ tomcat_ssl_certificate.key }}"
+    size: 4096
+    type: "RSA"
+    owner: "{{ tomcat_runtime_user }}"
+    group: "{{ tomcat_group }}"
+    mode: "{{ tomcat_file_mode }}"
+
+- name: Tomcat - ssl - generate an OpenSSL Certificate Signing Request
+  openssl_csr:
+    path: "{{ tomcat_ssl_certificate.file }}.csr"
+    privatekey_path: "{{ tomcat_ssl_certificate.key }}"
+    common_name: localhost
+    country_name: PE
+    organization_name: Contoso Ltd.
+    extended_key_usage:
+      - serverAuth
+    key_usage:
+      - digitalSignature
+    subject_alt_name: "DNS:localhost"
+    owner: "{{ tomcat_runtime_user }}"
+    group: "{{ tomcat_group }}"
+    mode: "{{ tomcat_file_mode }}"
+
+- name: Tomcat - ssl - generate self-signed SSL certificate
+  openssl_certificate:
+    csr_path: "{{ tomcat_ssl_certificate.file }}.csr"
+    path: "{{ tomcat_ssl_certificate.file }}"
+    privatekey_path: "{{ tomcat_ssl_certificate.key }}"
+    provider: selfsigned
+    selfsigned_digest: "sha256"
+    owner: "{{ tomcat_runtime_user }}"
+    group: "{{ tomcat_group }}"
+    mode: "{{ tomcat_file_mode }}"
+  when: not _is_cert.stat.exists
