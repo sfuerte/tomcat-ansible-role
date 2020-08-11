@@ -3,8 +3,14 @@
 
 - name: Tomcat - install and configure server
   block:
+    - name: Tomcat - install - check if Tomcat is already installed
+      stat:
+        path: "{{ system_base }}/apache-tomcat-{{ tomcat_version }}"
+      register: _is_installed
+
     - name: Tomcat - install server
       include_tasks: install.yml
+      when: not _is_installed.stat.exists or tomcat_force_install
 
     - name: Tomcat - configure application server
       include_tasks: configure.yml

@@ -1,11 +1,6 @@
 ---
 # tasks file for tomcat-ansible-role
 
-- name: Tomcat - install - check if Tomcat is already installed
-  stat:
-    path: "{{ system_base }}/apache-tomcat-{{ tomcat_version }}"
-  register: is_installed
-
 - name: Tomcat - install - create group {{ tomcat_group }}
   group:
     name: "{{ tomcat_group }}"
@@ -36,7 +31,6 @@
     owner: "{{ tomcat_user }}"
     remote_src: True
   register: tomcat_installed
-  when: not is_installed.stat.exists or tomcat_force_install
 
 - name: Tomcat - install - change ownership of the distribution folder
   file:
@@ -45,14 +39,12 @@
     group: "{{ tomcat_group }}"
     mode: "{{ tomcat_dir_mode }}"
     state: directory
-  when: not is_installed.stat.exists or tomcat_force_install
 
 - name: Tomcat - install - create symbolic link to distribution
   file:
     src: "{{ system_base }}/apache-tomcat-{{ tomcat_version }}"
     dest: "{{ catalina_home }}"
     state: link
-  when: not is_installed.stat.exists or tomcat_force_install
 
 - name: Tomcat - install - create `base` and `logs` folder structure
   file:
