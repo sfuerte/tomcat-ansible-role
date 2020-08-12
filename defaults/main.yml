@@ -90,6 +90,9 @@ catalina_opts: >-
   -Dorg.apache.catalina.connector.RECYCLE_FACADES=true
   -Dorg.apache.tomcat.util.http.ServerCookie.ALWAYS_ADD_EXPIRES=true
 
+catalina_policy: false
+catalina_policy_template: "conf/catalina.policy.j2"
+
 java_options: >-
   -server
   -Xms1g

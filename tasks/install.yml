@@ -22,6 +22,12 @@
     uid: "{{ tomcat_user_uid | default(omit) }}"
   when: tomcat_user_create
 
+- name: Tomcat - install - add runtime user to the group
+  user:
+    name: "{{ tomcat_runtime_user }}"
+    groups: "{{ tomcat_group }}"
+  when: tomcat_runtime_user != tomcat_user
+
 - name: Tomcat - install - unarchive package
   unarchive:
     src: "{{ tomcat_downloadURL }}"

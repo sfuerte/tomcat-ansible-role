@@ -15,6 +15,16 @@
     - { src: "web.xml.j2", dest: "web.xml" }
   notify: Tomcat restart
 
+- name: Tomcat - configure - JVM Security Manager
+  template:
+    src: "{{ catalina_policy_template }}"
+    dest: "{{ catalina_base }}/conf/catalina.policy"
+    group: "{{ tomcat_group }}"
+    owner: "{{ tomcat_runtime_user }}"
+    mode: "{{ tomcat_file_mode }}"
+  notify: Tomcat restart
+  when: catalina_policy
+
 - name: Tomcat - configure - user roles
   block:
     - name: Tomcat - configure - get user roles to be enabled

@@ -16,7 +16,7 @@ Conflicts=shutdown.target
 [Service]
 Environment=CATALINA_BASE={{ catalina_base }}
 Environment=CATALINA_HOME={{ catalina_home }}
-Environment=CATALINA_OPTS="{{ catalina_opts }}{% if tomcat_port_debug > 0 %} -Xdebug -Xrunjdwp:transport=dt_socket,address={{ tomcat_port_debug }},server=y,suspend=n{% endif %}"
+Environment=CATALINA_OPTS="{{ catalina_opts }}{% if catalina_policy %} -Djava.security.debug=ts,failure,logincontext,codebase={{ catalina_base }}/webapps -Djava.security.manager -Djava.security.policy=={{ catalina_base }}/conf/catalina.policy{% endif %}{% if tomcat_port_debug > 0 %} -Xdebug -Xrunjdwp:transport=dt_socket,address={{ tomcat_port_debug }},server=y,suspend=n{% endif %}"
 Environment=CATALINA_PID={{ tomcat_pid }}
 Environment=JAVA_OPTS="{{ java_options }}"
 ExecStart={{ catalina_home }}/bin/startup.sh
