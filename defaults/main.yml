@@ -27,6 +27,8 @@ tomcat_file_mode: 0640
 tomcat_delete_old: false
 tomcat_demo_delete: true
 
+# this one is our local override, used for enabling/disabling _certain_ tasks only required `sudo` access, i.e. SystemD, user/group creation, etc.
+exec_become: true
 
 #
 # systemd service settings

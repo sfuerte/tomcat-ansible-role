@@ -9,15 +9,19 @@
     mode: "{{ tomcat_file_mode }}"
 
 - name: Tomcat - systemd - create symlink
+  become: true
   file:
     src: "{{ catalina_base }}/{{ tomcat_service_name }}.service"
     dest: "/etc/systemd/system/{{ tomcat_service_name }}.service"
     state: "link"
+  when: exec_become
 
 - name: Tomcat - systemd - enable service
+  become: true
   systemd:
     name: "{{ tomcat_service_name }}"
     enabled: true
     masked: false
     daemon_reload: true
   notify: "Tomcat start"
+  when: exec_become

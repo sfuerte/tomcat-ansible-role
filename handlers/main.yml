@@ -2,19 +2,23 @@
 # handlers file for tomcat-ansible-role
 
 - name: Tomcat start
+  become: true
   systemd:
     name: "{{ tomcat_service_name }}"
     state: started
     daemon_reload: yes
   when:
+    - exec_become
     - tomcat_start | bool
     - not ansible_check_mode
 
 - name: Tomcat restart
+  become: true
   systemd:
     name: "{{ tomcat_service_name }}"
     state: restarted
     daemon_reload: yes
   when:
+    - exec_become
     - tomcat_start | bool
     - not ansible_check_mode

@@ -2,6 +2,7 @@
 # tasks file for tomcat-ansible-role
 
 - name: Tomcat - uninstall - stop Tomcat service
+  become: true
   systemd:
     name: "{{ tomcat_service_name }}"
     enabled: false
@@ -9,25 +10,29 @@
     daemon_reload: true
     state: stopped
   ignore_errors: true
+  when: exec_become
 
 - name: Tomcat - uninstall - remove symlinks
+  become: true
   file:
     path: "{{ item }}"
     state: absent
   loop:
     - "/etc/systemd/system/{{ tomcat_service_name }}.service"
     - "{{ catalina_home }}"
+  when: exec_become
 
-- name: Tomcat - uninstall - Create backup archive at {{ system_base }}/tomcat-backup-XXX.tgz
+- name: Tomcat - uninstall - Create backup archive at {{ catalina_base | dirname }}/tomcat-backup-XXX.tgz
   archive:
     path: "{{ catalina_base }}"
-    dest: "{{ system_base }}/tomcat-backup-{{ lookup('pipe','date +%Y%m%d%H%M%S') }}.tgz"
+    dest: "{{ catalina_base | dirname }}/tomcat-backup-{{ lookup('pipe','date +%Y%m%d%H%M%S') }}.tgz"
     owner: "{{ tomcat_runtime_user }}"
     group: "{{ tomcat_group }}"
-    mode: "{{ tomcat_dir_mode }}"
+    mode: "{{ tomcat_file_mode }}"
   when: tomcat_uninstall_create_backup
 
 - name: Tomcat - uninstall - delete folders
+  become: "{{ exec_become }}"
   file:
     path: "{{ item }}"
     state: absent
@@ -36,15 +41,21 @@
     - "{{ system_base }}/apache-tomcat-{{ tomcat_version }}"
 
 - name: Tomcat - uninstall - delete user {{ tomcat_user }}
+  become: true
   user:
     name: "{{ tomcat_user }}"
     force: yes
     groups: "{{ tomcat_group }}"
     state: absent
-  when: tomcat_uninstall_remove_all or tomcat_uninstall_remove_user
+  when:
+    - exec_become
+    - tomcat_uninstall_remove_all or tomcat_uninstall_remove_user
 
 - name: Tomcat - uninstall - delete group {{ tomcat_group }}
+  become: true
   group:
     name: "{{ tomcat_group }}"
     state: absent
-  when: tomcat_uninstall_remove_all or tomcat_uninstall_remove_group
+  when:
+    - exec_become
+    - tomcat_uninstall_remove_all or tomcat_uninstall_remove_group

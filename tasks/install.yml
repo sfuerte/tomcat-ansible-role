@@ -2,14 +2,16 @@
 # tasks file for tomcat-ansible-role
 
 - name: Tomcat - install - create group {{ tomcat_group }}
+  become: true
   group:
     name: "{{ tomcat_group }}"
     gid: "{{ tomcat_group_gid | default(omit) }}"
     state: present
     system: true
-  when: tomcat_group_create
+  when: tomcat_group_create and exec_become
 
 - name: Tomcat - install - create user {{ tomcat_user }}
+  become: true
   user:
     name: "{{ tomcat_user }}"
     comment: "Tomcat Web Server pseudo-user"
@@ -20,15 +22,17 @@
     state: present
     system: true
     uid: "{{ tomcat_user_uid | default(omit) }}"
-  when: tomcat_user_create
+  when: tomcat_user_create and exec_become
 
 - name: Tomcat - install - add runtime user to the group
+  become: true
   user:
     name: "{{ tomcat_runtime_user }}"
     groups: "{{ tomcat_group }}"
-  when: tomcat_runtime_user != tomcat_user
+  when: tomcat_runtime_user != tomcat_user and exec_become
 
 - name: Tomcat - install - unarchive package
+  become: "{{ exec_become }}"
   unarchive:
     src: "{{ tomcat_downloadURL }}"
     creates: "{{ system_base }}/apache-tomcat-{{ tomcat_version }}"
@@ -39,6 +43,7 @@
   register: tomcat_installed
 
 - name: Tomcat - install - change ownership of the distribution folder
+  become: "{{ exec_become }}"
   file:
     path: "{{ system_base }}/apache-tomcat-{{ tomcat_version }}"
     owner: "{{ tomcat_user }}"
@@ -47,6 +52,7 @@
     state: directory
 
 - name: Tomcat - install - create symbolic link to distribution
+  become: "{{ exec_become }}"
   file:
     src: "{{ system_base }}/apache-tomcat-{{ tomcat_version }}"
     dest: "{{ catalina_home }}"
@@ -80,6 +86,7 @@
   when: tomcat_delete_old
 
 - name: Tomcat - install - delete obsolete distribution folders
+  become: "{{ exec_become }}"
   file:
     path: "{{ item.path }}"
     state: absent
@@ -90,7 +97,8 @@
     - tomcat_delete_old
     - _tomcat_cleanup.matched > 0
 
-- name: Jetty - install - delete `demo-base` folder
+- name: Tomcat - install - delete `demo-base` folder
+  become: "{{ exec_become }}"
   file:
     path: "{{ catalina_home }}/{{ item }}"
     state: absent
