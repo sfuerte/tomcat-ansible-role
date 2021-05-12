@@ -12,6 +12,22 @@
       include_tasks: install.yml
       when: not _is_installed.stat.exists or tomcat_force_install
 
+    - name: Tomcat - make CATALINA_BASE folder structure
+      file:
+        group: "{{ tomcat_group }}"
+        owner: "{{ tomcat_runtime_user }}"
+        mode: "{{ tomcat_dir_mode }}"
+        path: "{{ item }}"
+        recurse: true
+        state: directory
+      loop:
+        - "{{ catalina_base }}"
+        - "{{ catalina_base }}/conf"
+        - "{{ catalina_base }}/lib"
+        - "{{ catalina_base }}/logs"
+        - "{{ catalina_base }}/webapps"
+        - "{{ catalina_base }}/temp"
+
     - name: Tomcat - configure application server
       include_tasks: configure.yml
 

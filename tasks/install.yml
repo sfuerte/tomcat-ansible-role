@@ -58,22 +58,6 @@
     dest: "{{ catalina_home }}"
     state: link
 
-- name: Tomcat - install - create `base` and `logs` folder structure
-  file:
-    group: "{{ tomcat_group }}"
-    owner: "{{ tomcat_runtime_user }}"
-    mode: "{{ tomcat_dir_mode }}"
-    path: "{{ item }}"
-    recurse: true
-    state: directory
-  loop:
-    - "{{ catalina_base }}"
-    - "{{ catalina_base }}/conf"
-    - "{{ catalina_base }}/lib"
-    - "{{ catalina_base }}/logs"
-    - "{{ catalina_base }}/webapps"
-    - "{{ catalina_base }}/temp"
-
 - name: Tomcat - install - find obsolete distribution folders
   find:
     file_type: directory
